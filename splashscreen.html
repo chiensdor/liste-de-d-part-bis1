@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<body style="margin:0;">
+<canvas id="c" width="1080" height="1920"></canvas>
+
+<script>
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+
+ctx.fillStyle = "#005bbb";
+ctx.fillRect(0, 0, 1080, 1920);
+
+ctx.beginPath();
+ctx.arc(540, 700, 180, 0, Math.PI * 2);
+ctx.fillStyle = "#ffffff";
+ctx.fill();
+
+ctx.fillStyle = "#005bbb";
+ctx.font = "bold 150px Arial";
+ctx.textAlign = "center";
+ctx.fillText("🐾", 540, 760);
+
+ctx.fillStyle = "#ffffff";
+ctx.font = "bold 100px Arial";
+ctx.fillText("FFSLC", 540, 1050);
+
+ctx.font = "60px Arial";
+ctx.fillText("Listes de départ", 540, 1150);
+</script>
+</body>
+</html>
