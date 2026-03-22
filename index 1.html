@@ -120,12 +120,12 @@ td {
 <body>
 
 <header>
-    <!-- Logo compact FFSLC -->
     <img src="logo_compact.png" alt="FFSLC">
     <h1>FFSLC – Générateur de listes de départ</h1>
 </header>
 
 <div class="container">
+
 <!-- ============================
      IMPORT DES INSCRITS
 ============================= -->
@@ -151,7 +151,7 @@ td {
 <div class="card">
     <h2>Actions</h2>
     <button id="btnGenererListes" class="success">Générer les listes</button>
-    <button id="btnExportPDFParDiscipline" class="primary"></button>
+    <button id="btnExportPDFParDiscipline" class="primary">PDF par discipline</button>
     <button id="btnExportPDFGlobal" class="primary">PDF global</button>
     <button id="btnExportExcelMulti" class="primary">Excel multi‑onglets</button>
     <button id="btnExporterTout" class="success">Exporter tout</button>
@@ -184,6 +184,7 @@ td {
         <tbody></tbody>
     </table>
 </div>
+
 <!-- Librairies CSV + Excel -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -240,23 +241,79 @@ function normaliserDiscipline(d) {
 }
 
 /* ============================================================
+   DETECTION DES DISCIPLINES JEUNES / SPECIALES
+============================================================ */
+function detecterDisciplineSpeciale(courseBrute) {
+    if (!courseBrute) return null;
+
+    const c = courseBrute
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+
+    if (c.includes("benjamin")) return "canicross_benjamins";
+    if (c.includes("minime")) return "canicross_minimes";
+    if (c.includes("cadet") && c.includes("canicross")) return "canicross_cadets";
+    if (c.includes("cadet") && c.includes("vtt")) return "canivtt_cadets";
+    if (c.includes("baby")) return "cani_baby";
+    if (c.includes("relais")) return "canicross_relais";
+
+    return null;
+}
+
+/* ============================================================
+   ORDRE DES DISCIPLINES : JEUNES EN DERNIER
+============================================================ */
+const ordreJeunes = [
+    "canicross_benjamins",
+    "canicross_minimes",
+    "canicross_cadets",
+    "canivtt_cadets",
+    "cani_baby",
+    "canicross_relais"
+];
+
+function trierDisciplines(disciplines) {
+    return disciplines.sort((a, b) => {
+        const aJeune = ordreJeunes.includes(a);
+        const bJeune = ordreJeunes.includes(b);
+
+        if (!aJeune && bJeune) return -1;
+        if (aJeune && !bJeune) return 1;
+
+        return a.localeCompare(b);
+    });
+}
+<!-- ============================
+     PARTIE 2 — IMPORT + FUSION
+============================= -->
+
+<script>
+/* ============================================================
    IMPORT INSCRITS
 ============================================================ */
 document.getElementById("fichierInscrits").addEventListener("change", () => {
     lireFichier(document.getElementById("fichierInscrits"), data => {
 
-        inscrits = data.map(l => ({
-            licence: cleanLicence(getCol(l, ["Licence"])),
-            nom: getCol(l, ["Nom de famille"]),
-            prenom: getCol(l, ["Prénom"]),
-            categorie: getCol(l, ["Catégorie"]),
-            club: getCol(l, ["Nom de l'équipe", "Club"]),
-            chien: getCol(l, ["#1 Chien - nom"]),
-            race: getCol(l, ["#1 Chien - race"]),
-            puce: getCol(l, ["#1 Chien - puce"]),
-            dossard: getCol(l, ["Dossard"]),
-            discipline: normaliserDiscipline(getCol(l, ["Course"]))
-        }));
+        inscrits = data.map(l => {
+            const courseBrute = getCol(l, ["Course"]);
+            const disciplineBase = normaliserDiscipline(courseBrute);
+            const disciplineSpeciale = detecterDisciplineSpeciale(courseBrute);
+
+            return {
+                licence: cleanLicence(getCol(l, ["Licence"])),
+                nom: getCol(l, ["Nom de famille"]),
+                prenom: getCol(l, ["Prénom"]),
+                categorie: getCol(l, ["Catégorie"]),
+                club: getCol(l, ["Club", "Nom de l'équipe"]),
+                chien: getCol(l, ["#1 Chien - nom"]),
+                race: getCol(l, ["#1 Chien - race"]),
+                puce: getCol(l, ["#1 Chien - puce", "Puce"]),   // ✔ Correction ici
+                dossard: getCol(l, ["Dossard"]),
+                discipline: disciplineSpeciale ? disciplineSpeciale : disciplineBase,
+                courseBrute: courseBrute
+            };
+        });
 
         fusionner();
     });
@@ -299,8 +356,7 @@ fetch("https://raw.githubusercontent.com/chiensdor/liste-de-d-part/main/resultat
                     licence: cleanLicence(getCol(l, ["licence"])),
                     moyenne: getCol(l, ["moyenne"]),
                     courses: getCol(l, ["nombre_courses"]),
-                    participants: "",
-                    discipline: "" // pas dans ton fichier
+                    participants: ""
                 }));
             }
         });
@@ -308,24 +364,27 @@ fetch("https://raw.githubusercontent.com/chiensdor/liste-de-d-part/main/resultat
 
 /* ============================================================
    FUSION INSCRITS + MOYENNES
+   (clé fiable = LICENCE)
 ============================================================ */
 function fusionner() {
 
     resultatsGlobaux = inscrits.map(i => {
-        const r = resultats.find(x => x.licence === i.licence);
+        const r = resultats.find(x => x.licence === i.licence);  // ✔ Correction ici
+
         return {
             ...i,
             moyenne: r ? r.moyenne : "",
             courses: r ? r.courses : "",
-            participants: r ? r.participants : "",
-            discipline: i.discipline
+            participants: r ? r.participants : ""
         };
     });
 
     filteredView = [...resultatsGlobaux];
     afficherTableau();
 
-    const disciplines = [...new Set(resultatsGlobaux.map(r => r.discipline))];
+    /* --- Détection des disciplines --- */
+    let disciplines = [...new Set(resultatsGlobaux.map(r => r.discipline))];
+    disciplines = trierDisciplines(disciplines);
 
     const zone = document.getElementById("zoneParametres");
     zone.innerHTML = "";
@@ -338,8 +397,10 @@ function fusionner() {
         zone.innerHTML += `
             <div class="card" style="background:#eef5ff;">
                 <h3>${d.replaceAll("_", " ").toUpperCase()}</h3>
+
                 <label>Heure de départ :</label>
                 <input type="time" id="heure_${id}" value="09:00">
+
                 <label>Mode de départ :</label>
                 <select id="mode_${id}">
                     <option value="1">Individuel</option>
@@ -350,10 +411,13 @@ function fusionner() {
                     <option value="40">Vagues de 40</option>
                     <option value="30s">Individuel 30s</option>
                 </select>
+
+                <label>Premier dossard :</label>
+                <input type="number" id="dossard_${id}" value="1" min="1">
             </div>
         `;
 
-        paramDepart[d] = { heure: "09:00", mode: "1" };
+        paramDepart[d] = { heure: "09:00", mode: "1", dossard: 1 };
     });
 
     alert("Fusion terminée !");
@@ -388,7 +452,10 @@ function afficherTableau() {
     document.getElementById("chipStats").textContent =
         filteredView.length + " inscrits fusionnés";
 }
+</script>
 
+<!-- PARTIE 3 — GENERATION + EXPORTS + PDF -->
+<script>
 /* ============================================================
    TRI DES COLONNES
 ============================================================ */
@@ -429,7 +496,7 @@ function trierParMoyenne(liste) {
     });
 }
 
-function genererGroupes(liste, heure, taille, intervalle) {
+function genererGroupes(liste, heure, taille, intervalle, premierDossard) {
     let [h, m] = heure.split(":").map(Number);
     let base = new Date();
     base.setHours(h, m, 0, 0);
@@ -437,11 +504,15 @@ function genererGroupes(liste, heure, taille, intervalle) {
     return liste.map((item, i) => {
         let g = Math.floor(i / taille);
         let d = new Date(base.getTime() + g * intervalle * 1000);
-        return { ...item, heure_depart: d.toTimeString().split(" ")[0] };
+        return {
+            ...item,
+            dossard: premierDossard + i,
+            heure_depart: d.toTimeString().split(" ")[0]
+        };
     });
 }
 
-function genererVagues(liste, heure, taille) {
+function genererVagues(liste, heure, taille, premierDossard) {
     let [h, m] = heure.split(":").map(Number);
     let base = new Date();
     base.setHours(h, m, 0, 0);
@@ -449,18 +520,26 @@ function genererVagues(liste, heure, taille) {
     return liste.map((item, i) => {
         let g = Math.floor(i / taille);
         let d = new Date(base.getTime() + g * 60000);
-        return { ...item, heure_depart: d.toTimeString().split(" ")[0] };
+        return {
+            ...item,
+            dossard: premierDossard + i,
+            heure_depart: d.toTimeString().split(" ")[0]
+        };
     });
 }
 
-function genererIndividuel30s(liste, heure) {
+function genererIndividuel30s(liste, heure, premierDossard) {
     let [h, m] = heure.split(":").map(Number);
     let base = new Date();
     base.setHours(h, m, 0, 0);
 
     return liste.map((item, i) => {
         let d = new Date(base.getTime() + i * 30000);
-        return { ...item, heure_depart: d.toTimeString().split(" ")[0] };
+        return {
+            ...item,
+            dossard: premierDossard + i,
+            heure_depart: d.toTimeString().split(" ")[0]
+        };
     });
 }
 
@@ -471,13 +550,17 @@ document.getElementById("btnGenererListes").addEventListener("click", () => {
         const id = d.replace(/[^a-z0-9]/gi, "_");
         const heure = document.getElementById("heure_" + id).value;
         const mode = document.getElementById("mode_" + id).value;
+        const premierDossard = Number(document.getElementById("dossard_" + id).value) || 1;
 
         const liste = resultatsGlobaux.filter(r => r.discipline === d);
         trierParMoyenne(liste);
 
-        if (mode === "30s") listesFinales[d] = genererIndividuel30s(liste, heure);
-        else if (mode == 20 || mode == 40) listesFinales[d] = genererVagues(liste, heure, Number(mode));
-        else listesFinales[d] = genererGroupes(liste, heure, Number(mode), 30);
+        if (mode === "30s")
+            listesFinales[d] = genererIndividuel30s(liste, heure, premierDossard);
+        else if (mode == 20 || mode == 40)
+            listesFinales[d] = genererVagues(liste, heure, Number(mode), premierDossard);
+        else
+            listesFinales[d] = genererGroupes(liste, heure, Number(mode), 30, premierDossard);
     }
 
     resultatsGlobaux = Object.values(listesFinales).flat();
@@ -486,8 +569,7 @@ document.getElementById("btnGenererListes").addEventListener("click", () => {
 
     alert("Listes générées !");
 });
-</script>
-<script>
+
 /* ============================================================
    EXPORT CSV
 ============================================================ */
@@ -546,7 +628,7 @@ document.getElementById("btnExporterTout").addEventListener("click", () => {
 });
 
 /* ============================================================
-   PDF PAR DISCIPLINE (logo large)
+   PDF PAR DISCIPLINE
 ============================================================ */
 document.getElementById("btnExportPDFParDiscipline").addEventListener("click", () => {
     if (!listesFinales || Object.keys(listesFinales).length === 0) {
@@ -626,7 +708,7 @@ document.getElementById("btnExportPDFParDiscipline").addEventListener("click", (
 });
 
 /* ============================================================
-   PDF GLOBAL (logo large)
+   PDF GLOBAL
 ============================================================ */
 document.getElementById("btnExportPDFGlobal").addEventListener("click", () => {
     if (!listesFinales || Object.keys(listesFinales).length === 0) {
@@ -692,7 +774,7 @@ document.getElementById("btnExportPDFGlobal").addEventListener("click", () => {
 });
 
 /* ============================================================
-   RESET PRO
+   RESET
 ============================================================ */
 document.getElementById("btnReset").addEventListener("click", () => {
     inscrits = [];
@@ -700,6 +782,7 @@ document.getElementById("btnReset").addEventListener("click", () => {
     resultatsGlobaux = [];
     filteredView = [];
     listesFinales = {};
+    window.paramDepart = {};
 
     document.querySelector("#tableResultat tbody").innerHTML = "";
     document.getElementById("chipStats").textContent = "0 inscrits fusionnés";
@@ -708,7 +791,8 @@ document.getElementById("btnReset").addEventListener("click", () => {
     alert("Application réinitialisée.");
 });
 </script>
-<!-- Enregistrement du service worker -->
+
+<!-- Service Worker -->
 <script>
 if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
