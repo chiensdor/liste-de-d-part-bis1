@@ -41,6 +41,19 @@ th { background:#e8edf5; cursor:pointer; }
     display:inline-block; padding:6px 12px; background:#e0ecff;
     border-radius:20px; margin-bottom:10px;
 }
+/* --- BOUTONS --- */
+button {
+    background: #003f7f;
+    color: white;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-right: 10px;
+    font-size: 14px;
+    transition: 0.2s;
+}
+
 </style>
 </head>
 
@@ -50,6 +63,11 @@ th { background:#e8edf5; cursor:pointer; }
     FFSLC – Générateur de listes de départ
     <div>Créé par Robert AURAY Copyright © version 3.00</div>
 </header>
+
+<!-- BOUTON RETOUR MENU -->
+<button class="retour-btn" onclick="window.location.href='https://chiensdor.github.io/menu-application/'">
+    ⬅️ Retour au menu FFSLC
+</button>
 
 <div class="container">
 <div class="card">
@@ -464,14 +482,6 @@ function genererParametresParDiscipline() {
 ============================================================ */
 function trierParMoyenne(liste) {
     return liste.sort((a, b) => {
-
-        // 1️⃣ FRA en premier
-        const aFRA = (a.equipe_france || "").toUpperCase() === "FRA" ? 1 : 0;
-        const bFRA = (b.equipe_france || "").toUpperCase() === "FRA" ? 1 : 0;
-
-        if (aFRA !== bFRA) return bFRA - aFRA;
-
-        // 2️⃣ Tri par moyenne
         const ma = Number(a.moyenne) || 0;
         const mb = Number(b.moyenne) || 0;
 
@@ -796,7 +806,7 @@ document.getElementById("btnExportPDFGlobal").addEventListener("click", () => {
             <tr>
                 <td>${l.dossard || ""}</td>
                 <td>${l.licence}</td>
-                <td>${(l.equipe_france || "").toUpperCase()}</td>      <!-- 🔥 AJOUT -->
+                <td>${l.equipe_france || ""}</td>   <!-- 🔥 AJOUT -->
                 <td>${l.nom}</td>
                 <td>${l.prenom}</td>
                 <td>${l.categorie}</td>
