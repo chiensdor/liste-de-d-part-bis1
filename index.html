@@ -158,8 +158,8 @@ function normaliserColonnesExcel(obj) {
         "Prenom": "prenom",
         "Catégorie": "categorie",
         "Categorie": "categorie",
-        "Nom de l'équipe": "club",
-        "Club": "club",
+        "Nom de l'équipe": "Club",
+        "club": "Club",
         "#1 Chien - nom": "nom_du_chien",
         "Nom du chien": "nom_du_chien",
         "#1 Chien - race": "race",
@@ -363,6 +363,7 @@ function fusionner() {
             .trim().toLowerCase(),
 
         categorie: (x.categorie || "").trim().toLowerCase(),
+
         club: (x.club || "").trim(),
 
         nom_du_chien: (x.nom_du_chien || "")
@@ -395,6 +396,8 @@ function fusionner() {
 
 	return {
     ...i,
+            // ✅ Correction : club rétabli
+            club: i.club || (r ? r.club : ""),
     moyenne: r ? r.moyenne : "",
     courses: r ? r.courses : "",
     participants: r ? r.participants : "",
