@@ -41,19 +41,6 @@ th { background:#e8edf5; cursor:pointer; }
     display:inline-block; padding:6px 12px; background:#e0ecff;
     border-radius:20px; margin-bottom:10px;
 }
-/* --- BOUTONS --- */
-button {
-    background: #003f7f;
-    color: white;
-    border: none;
-    padding: 10px 18px;
-    border-radius: 6px;
-    cursor: pointer;
-    margin-right: 10px;
-    font-size: 14px;
-    transition: 0.2s;
-}
-
 </style>
 </head>
 
@@ -61,15 +48,16 @@ button {
 
 <header>
     FFSLC – Générateur de listes de départ
-    <div>Créé par Robert AURAY Copyright © version 3.00</div>
+    <div>Créé par Robert AURAY Copyright © version 3.01</div>
 </header>
 
 <!-- BOUTON RETOUR MENU -->
-<button class="retour-btn" onclick="window.location.href='https://chiensdor.github.io/menu-application/'">
+<button class="primary" onclick="window.location.href='https://chiensdor.github.io/menu-application/'">
     ⬅️ Retour au menu FFSLC
 </button>
 
 <div class="container">
+
 <div class="card">
     <h2>Import des inscrits</h2>
     <input type="file" id="fichierInscrits" accept=".csv,.xls,.xlsx">
@@ -87,6 +75,9 @@ button {
     <button id="btnExportPDFGlobal" class="primary">PDF global</button>
     <button id="btnExportExcelMulti" class="primary">Excel multi‑onglets</button>
     <button id="btnExporterTout" class="success">Exporter tout</button>
+
+    <!-- 🔵 NOUVEAU BOUTON LISTE ALPHABÉTIQUE -->
+    <button id="btnAlphaChoix" class="primary">Liste alphabétique (choix)</button>
 </div>
 
 <div class="card">
@@ -96,7 +87,7 @@ button {
         <thead>
             <tr>
                 <th>Licence</th>
-		<th>Equipe de France</th>
+                <th>Equipe de France</th>
                 <th>Nom</th>
                 <th>Prénom</th>
                 <th>Catégorie</th>
@@ -113,7 +104,6 @@ button {
         <tbody></tbody>
     </table>
 </div>
-
 <!-- Librairies -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -148,8 +138,6 @@ function getCol(ligne, noms) {
    🔵 NORMALISATION DES COLONNES EXCEL
 ============================================================ */
 function normaliserColonnesExcel(obj) {
-    console.log("Colonnes détectées :", Object.keys(obj));
-
     const mapping = {
         "Licence": "licence",
         "Nom de famille": "nom",
@@ -169,16 +157,14 @@ function normaliserColonnesExcel(obj) {
         "Dossard": "dossard",
         "Course": "discipline",
         "Discipline": "discipline",
-	"Equipe de France": "equipe_france"
+        "Equipe de France": "equipe_france"
     };
 
     let out = {};
-
     for (let col in obj) {
         const propre = mapping[col] || col;
         out[propre] = obj[col];
     }
-
     return out;
 }
 
@@ -187,14 +173,8 @@ function normaliserColonnesExcel(obj) {
 ============================================================ */
 function convertirExcelEnCSV(data) {
     const normalise = data.map(l => normaliserColonnesExcel(l));
-
     const csv = Papa.unparse(normalise);
-
-    const res = Papa.parse(csv, {
-        header: true,
-        skipEmptyLines: true
-    });
-
+    const res = Papa.parse(csv, { header: true, skipEmptyLines: true });
     return res.data;
 }
 
@@ -237,7 +217,7 @@ function normaliserDiscipline(d) {
 }
 
 /* ============================================================
-   🔵 IMPORT INSCRITS (CSV ou Excel) — AVEC CONVERSION AUTOMATIQUE
+   🔵 IMPORT INSCRITS (CSV ou Excel)
 ============================================================ */
 document.getElementById("fichierInscrits").addEventListener("change", () => {
     lireFichier(document.getElementById("fichierInscrits"), data => {
@@ -260,7 +240,7 @@ document.getElementById("fichierInscrits").addEventListener("change", () => {
 });
 
 /* ============================================================
-   🔵 LECTURE CSV / EXCEL AVEC CONVERSION AUTOMATIQUE
+   🔵 LECTURE CSV / EXCEL
 ============================================================ */
 function lireFichier(input, callback) {
     const fichier = input.files[0];
@@ -287,7 +267,6 @@ function lireFichier(input, callback) {
             });
 
             const ws = wb.Sheets[wb.SheetNames[0]];
-
             const json = XLSX.utils.sheet_to_json(ws);
             const csvNormalise = convertirExcelEnCSV(json);
 
@@ -311,35 +290,18 @@ fetch("https://raw.githubusercontent.com/chiensdor/liste-de-d-part/main/resultat
             complete: data => {
 
                 resultats = data.data.map(x => ({
-    licence: (x["licence"] || "").trim().toUpperCase(),
-
-    equipe_france: (x["equipe_france"] || "")  // 🔥 AJOUT ICI 
-        .normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
-        .trim().toLowerCase(),
-
-    nom: (x["nom"] || "")
-        .normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
-        .trim().toLowerCase(),
-
-    prenom: (x["prenom"] || "")
-        .normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
-        .trim().toLowerCase(),
-
-    categorie: (x["categorie"] || "").trim().toLowerCase(),
-    club: (x["club"] || "").trim(),
-
-    nom_du_chien: (x["nom_du_chien"] || "")
-        .normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
-        .trim().toLowerCase(),
-
-    race: (x["race"] || "").trim(),
-    puce: (x["puce"] || "").replace(/\D/g, ""),
-
-    moyenne: x["moyenne"] || "",
-    courses: x["nombre_courses"] || ""
-
-
-}));
+                    licence: (x["licence"] || "").trim().toUpperCase(),
+                    equipe_france: (x["equipe_france"] || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase(),
+                    nom: (x["nom"] || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase(),
+                    prenom: (x["prenom"] || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase(),
+                    categorie: (x["categorie"] || "").trim().toLowerCase(),
+                    club: (x["club"] || "").trim(),
+                    nom_du_chien: (x["nom_du_chien"] || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase(),
+                    race: (x["race"] || "").trim(),
+                    puce: (x["puce"] || "").replace(/\D/g, ""),
+                    moyenne: x["moyenne"] || "",
+                    courses: x["nombre_courses"] || ""
+                }));
 
                 console.log("Moyennes importées :", resultats.length);
             }
@@ -347,46 +309,28 @@ fetch("https://raw.githubusercontent.com/chiensdor/liste-de-d-part/main/resultat
     });
 
 /* ============================================================
-   🔵 FUSION INSCRITS + MOYENNES (VERSION ROBUSTE)
+   🔵 FUSION INSCRITS + MOYENNES
 ============================================================ */
 function fusionner() {
 
     resultats = resultats.map(x => ({
         licence: (x.licence || "").trim().toUpperCase(),
-
-        nom: (x.nom || "")
-            .normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
-            .trim().toLowerCase(),
-
-        prenom: (x.prenom || "")
-            .normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
-            .trim().toLowerCase(),
-
+        nom: (x.nom || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase(),
+        prenom: (x.prenom || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase(),
         categorie: (x.categorie || "").trim().toLowerCase(),
-
         club: (x.club || "").trim(),
-
-        nom_du_chien: (x.nom_du_chien || "")
-            .normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
-            .trim().toLowerCase(),
-
+        nom_du_chien: (x.nom_du_chien || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase(),
         race: (x.race || "").trim(),
         puce: (x.puce || "").replace(/\D/g, ""),
-
         moyenne: x.moyenne || "",
         courses: x.courses || "",
-        equipe_france: x.equipe_france || "" 
+        equipe_france: x.equipe_france || ""
     }));
 
     resultatsGlobaux = inscrits.map(i => {
 
-        const prenomInscrit = (i.prenom || "")
-            .normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
-            .trim().toLowerCase();
-
-        const chienInscrit = (i.nom_du_chien || "")
-            .normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
-            .trim().toLowerCase();
+        const prenomInscrit = (i.prenom || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
+        const chienInscrit = (i.nom_du_chien || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
 
         const r = resultats.find(x =>
             x.licence === i.licence &&
@@ -394,21 +338,18 @@ function fusionner() {
             x.nom_du_chien === chienInscrit
         );
 
-	return {
-    ...i,
-            // ✅ Correction : club rétabli
+        return {
+            ...i,
             club: i.club || (r ? r.club : ""),
-    moyenne: r ? r.moyenne : "",
-    courses: r ? r.courses : "",
-    participants: r ? r.participants : "",
-    discipline: i.discipline,
-    equipe_france: r ? r.equipe_france : ""   // 🔥 AJOUT
-};
-
+            moyenne: r ? r.moyenne : "",
+            courses: r ? r.courses : "",
+            participants: r ? r.participants : "",
+            discipline: i.discipline,
+            equipe_france: r ? r.equipe_france : ""
+        };
     });
 
-    resultatsGlobaux = resultatsGlobaux.filter(x => x !== null && x !== undefined);
-
+    resultatsGlobaux = resultatsGlobaux.filter(x => x);
     filteredView = [...resultatsGlobaux];
 
     afficherTableau();
@@ -485,6 +426,14 @@ function genererParametresParDiscipline() {
 ============================================================ */
 function trierParMoyenne(liste) {
     return liste.sort((a, b) => {
+
+        // 1️⃣ FRA en premier
+        const aFRA = (a.equipe_france || "").toUpperCase() === "FRA" ? 1 : 0;
+        const bFRA = (b.equipe_france || "").toUpperCase() === "FRA" ? 1 : 0;
+
+        if (aFRA !== bFRA) return bFRA - aFRA;
+
+        // 2️⃣ Tri par moyenne
         const ma = Number(a.moyenne) || 0;
         const mb = Number(b.moyenne) || 0;
 
@@ -494,9 +443,8 @@ function trierParMoyenne(liste) {
         return ma - mb;
     });
 }
-
 /* ============================================================
-   🔵 DÉPARTS PAR GROUPES (1, 2, 3, 4)
+   🔵 DÉPARTS PAR GROUPES
 ============================================================ */
 function genererGroupes(liste, heure, taille, intervalle) {
     let [h, m] = heure.split(":").map(Number);
@@ -511,7 +459,7 @@ function genererGroupes(liste, heure, taille, intervalle) {
 }
 
 /* ============================================================
-   🔵 DÉPARTS EN VAGUES (20, 40)
+   🔵 DÉPARTS EN VAGUES
 ============================================================ */
 function genererVagues(liste, heure, taille) {
     let [h, m] = heure.split(":").map(Number);
@@ -589,7 +537,6 @@ document.getElementById("btnGenererListes").addEventListener("click", () => {
     alert("Listes générées !");
 });
 </script>
-
 <script>
 /* ============================================================
    🔵 AFFICHAGE DU TABLEAU
@@ -632,7 +579,7 @@ document.querySelectorAll("#tableResultat th").forEach((th, index) => {
     th.addEventListener("click", () => {
 
         const cle = [
-            "licence","nom","prenom","categorie","club",
+            "licence","equipe_france","nom","prenom","categorie","club",
             "nom_du_chien","race","puce",
             "dossard","moyenne","discipline","heure_depart"
         ][index];
@@ -713,6 +660,7 @@ function exporterExcel(data, nom) {
     XLSX.utils.book_append_sheet(wb, ws, "Départs");
     XLSX.writeFile(wb, nom);
 }
+
 /* ============================================================
    🔵 EXPORT EXCEL MULTI-ONGLETS
 ============================================================ */
@@ -747,6 +695,7 @@ document.getElementById("btnExportExcelMulti").addEventListener("click", () => {
 
     XLSX.writeFile(wb, "depart_multi_onglets.xlsx");
 });
+
 /* ============================================================
    🔵 EXPORTER TOUT (CSV + Excel)
 ============================================================ */
@@ -809,7 +758,7 @@ document.getElementById("btnExportPDFGlobal").addEventListener("click", () => {
             <tr>
                 <td>${l.dossard || ""}</td>
                 <td>${l.licence}</td>
-                <td>${l.equipe_france || ""}</td>   <!-- 🔥 AJOUT -->
+                <td>${l.equipe_france || ""}</td>
                 <td>${l.nom}</td>
                 <td>${l.prenom}</td>
                 <td>${l.categorie}</td>
@@ -860,6 +809,142 @@ if ("serviceWorker" in navigator) {
             .catch(err => console.error("Erreur SW :", err));
     });
 }
+</script>
+<!-- ============================================================
+     🔵 POPUP LISTE ALPHABÉTIQUE
+============================================================ -->
+<div id="popupAlpha" style="
+    display:none;
+    position:fixed;
+    top:50%; left:50%;
+    transform:translate(-50%, -50%);
+    background:white;
+    padding:20px;
+    border-radius:10px;
+    box-shadow:0 0 15px rgba(0,0,0,0.3);
+    z-index:9999;
+">
+    <h3 style="margin-top:0; color:#003f7f;">Export liste alphabétique</h3>
+
+    <button id="alphaPDF" class="primary">PDF</button>
+    <button id="alphaExcel" class="primary">Excel</button>
+    <button id="alphaBoth" class="success">PDF + Excel</button>
+
+    <br><br>
+    <button id="alphaClose" class="danger">Fermer</button>
+</div>
+
+<script>
+/* ============================================================
+   🔵 OUVERTURE / FERMETURE POPUP
+============================================================ */
+document.getElementById("btnAlphaChoix").addEventListener("click", () => {
+    document.getElementById("popupAlpha").style.display = "block";
+});
+
+document.getElementById("alphaClose").addEventListener("click", () => {
+    document.getElementById("popupAlpha").style.display = "none";
+});
+
+/* ============================================================
+   🔵 LISTE ALPHABÉTIQUE (Nom → Prénom)
+============================================================ */
+function getListeAlphabetique() {
+    return resultatsGlobaux
+        .map(l => ({
+            nom: l.nom || "",
+            prenom: l.prenom || "",
+            dossard: l.dossard || "",
+            discipline: l.discipline || ""
+        }))
+        .sort((a, b) => {
+            const n = a.nom.localeCompare(b.nom, "fr", { sensitivity: "base" });
+            if (n !== 0) return n;
+            return a.prenom.localeCompare(b.prenom, "fr", { sensitivity: "base" });
+        });
+}
+
+/* ============================================================
+   🔵 EXPORT PDF ALPHABÉTIQUE
+============================================================ */
+function exportAlphaPDF() {
+    const liste = getListeAlphabetique();
+    if (!liste.length) return alert("Aucune donnée.");
+
+    const w = window.open("", "_blank");
+
+    let html = `
+    <html><head><title>Liste alphabétique</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        h1 { text-align: center; color:#003f7f; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { border: 1px solid #000; padding: 6px; font-size: 12px; }
+        th { background:#e6e6e6; }
+    </style></head><body>
+
+    <h1>Liste alphabétique – Remise des dossards</h1>
+
+    <table>
+        <thead>
+            <tr>
+                <th>NOM</th>
+                <th>PRÉNOM</th>
+                <th>DOSSARD</th>
+                <th>DISCIPLINE</th>
+            </tr>
+        </thead>
+        <tbody>`;
+
+    liste.forEach(l => {
+        html += `
+        <tr>
+            <td>${l.nom}</td>
+            <td>${l.prenom}</td>
+            <td>${l.dossard}</td>
+            <td>${l.discipline}</td>
+        </tr>`;
+    });
+
+    html += `
+        </tbody>
+    </table>
+    </body></html>`;
+
+    w.document.write(html);
+    w.document.close();
+    w.onload = () => w.print();
+}
+
+/* ============================================================
+   🔵 EXPORT EXCEL ALPHABÉTIQUE
+============================================================ */
+function exportAlphaExcel() {
+    const liste = getListeAlphabetique();
+    if (!liste.length) return alert("Aucune donnée.");
+
+    const ws = XLSX.utils.json_to_sheet(liste);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Alphabetique");
+
+    XLSX.writeFile(wb, "liste_alphabetique.xlsx");
+}
+
+/* ============================================================
+   🔵 BOUTONS DU POPUP
+============================================================ */
+document.getElementById("alphaPDF").addEventListener("click", () => {
+    exportAlphaPDF();
+});
+
+document.getElementById("alphaExcel").addEventListener("click", () => {
+    exportAlphaExcel();
+});
+
+document.getElementById("alphaBoth").addEventListener("click", () => {
+    exportAlphaPDF();
+    exportAlphaExcel();
+});
 </script>
 
 </div> <!-- fermeture .container -->
