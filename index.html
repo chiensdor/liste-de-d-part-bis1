@@ -340,7 +340,11 @@ function fusionner() {
 
         return {
             ...i,
-            club: i.club || (r ? r.club : ""),
+            club: i.club && i.club.trim() !== "" 
+     		? i.club 
+       		: (r && r.club ? r.club : ""),
+
+
             moyenne: r ? r.moyenne : "",
             courses: r ? r.courses : "",
             participants: r ? r.participants : "",
