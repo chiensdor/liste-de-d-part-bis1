@@ -227,7 +227,7 @@ document.getElementById("fichierInscrits").addEventListener("change", () => {
             nom: x.nom,
             prenom: x.prenom,
             categorie: x.categorie,
-            club: x.club,
+            club: getCol(x, ["Club", "club", "Nom de l'équipe"]),
             nom_du_chien: x.nom_du_chien,
             race: x.race,
             puce: x.puce,
