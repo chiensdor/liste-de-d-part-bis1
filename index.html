@@ -51,7 +51,6 @@ th { background:#e8edf5; cursor:pointer; }
     <div>Créé par Robert AURAY Copyright © version 3.01</div>
 </header>
 
-<!-- BOUTON RETOUR MENU -->
 <button class="primary" onclick="window.location.href='https://chiensdor.github.io/menu-application/'">
     ⬅️ Retour au menu FFSLC
 </button>
@@ -75,8 +74,6 @@ th { background:#e8edf5; cursor:pointer; }
     <button id="btnExportPDFGlobal" class="primary">PDF global</button>
     <button id="btnExportExcelMulti" class="primary">Excel multi‑onglets</button>
     <button id="btnExporterTout" class="success">Exporter tout</button>
-
-    <!-- 🔵 NOUVEAU BOUTON LISTE ALPHABÉTIQUE -->
     <button id="btnAlphaChoix" class="primary">Liste alphabétique (choix)</button>
 </div>
 
@@ -104,14 +101,11 @@ th { background:#e8edf5; cursor:pointer; }
         <tbody></tbody>
     </table>
 </div>
-<!-- Librairies -->
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <script>
-/* ============================================================
-   🔵 VARIABLES GLOBALES
-============================================================ */
 let inscrits = [];
 let resultats = [];
 let resultatsGlobaux = [];
@@ -119,9 +113,6 @@ let filteredView = [];
 let listesFinales = {};
 window.paramDepart = {};
 
-/* ============================================================
-   🔵 OUTILS DE NETTOYAGE
-============================================================ */
 function cleanLicence(v) {
     if (!v) return "";
     return String(v).toUpperCase().replace(/\s+/g, "").replace(/[^A-Z0-9]/g, "");
@@ -134,9 +125,6 @@ function getCol(ligne, noms) {
     return "";
 }
 
-/* ============================================================
-   🔵 NORMALISATION DES COLONNES EXCEL
-============================================================ */
 function normaliserColonnesExcel(obj) {
     const mapping = {
         "Licence": "licence",
@@ -168,9 +156,6 @@ function normaliserColonnesExcel(obj) {
     return out;
 }
 
-/* ============================================================
-   🔵 CONVERSION AUTOMATIQUE EXCEL → CSV INTERNE
-============================================================ */
 function convertirExcelEnCSV(data) {
     const normalise = data.map(l => normaliserColonnesExcel(l));
     const csv = Papa.unparse(normalise);
@@ -178,47 +163,6 @@ function convertirExcelEnCSV(data) {
     return res.data;
 }
 
-/* ============================================================
-   🔵 NORMALISATION DES DISCIPLINES
-============================================================ */
-function normaliserDiscipline(d) {
-    if (!d) return "";
-    d = d.toLowerCase().replace(/\s+/g, "");
-
-    const isSamedi = d.includes("samedi");
-    const isDimanche = d.includes("dimanche");
-    const suffix = isSamedi ? "_samedi" : isDimanche ? "_dimanche" : "";
-
-    if (d.includes("canicrossbenjamin")) return "canicross_benjamin" + suffix;
-    if (d.includes("canicrossminime")) return "canicross_minime" + suffix;
-    if (d.includes("canicrosscadet")) return "canicross_cadet" + suffix;
-    if (d.includes("canivttcadet")) return "canivtt_cadet" + suffix;
-    if (d.includes("canicrossbaby")) return "canicross_baby" + suffix;
-    if (d.includes("relais")) return "canicross_relais" + suffix;
-
-    if (d.includes("canicrossdécouverte")) return "canicross_découverte" + suffix;
-    if (d.includes("canicrosscourt")) return "canicross_court" + suffix;
-    if (d.includes("canicrosslong")) return "canicross_long" + suffix;
-    if (d.includes("canicross")) return "canicross" + suffix;
-
-    if (d.includes("vttcourt")) return "canivtt_court" + suffix;
-    if (d.includes("vttlong")) return "canivtt_long" + suffix;
-    if (d.includes("vtt")) return "canivtt" + suffix;
-
-    if (d.includes("pedicyclecourt")) return "canipedicycle_court" + suffix;
-    if (d.includes("pedicyclelong")) return "canipedicycle_long" + suffix;
-    if (d.includes("pedi") || d.includes("cycle")) return "canipedicycle" + suffix;
-
-    if (d.includes("trail")) return "canitrail" + suffix;
-    if (d.includes("canimarche")) return "Canimarche_non_chronométrée" + suffix;
-    if (d.includes("canirandonnée")) return "Canirandonnée_non_chronométrée" + suffix;
-
-    return "";
-}
-
-/* ============================================================
-   🔵 IMPORT INSCRITS (CSV ou Excel)
-============================================================ */
 document.getElementById("fichierInscrits").addEventListener("change", () => {
     lireFichier(document.getElementById("fichierInscrits"), data => {
 
@@ -232,16 +176,15 @@ document.getElementById("fichierInscrits").addEventListener("change", () => {
             race: x.race,
             puce: x.puce,
             dossard: x.dossard,
-            discipline: normaliserDiscipline(x.discipline)
+
+            /* 🔵 MODIFICATION : discipline brute */
+            discipline: (x.discipline || "").trim()
         }));
 
         fusionner();
     });
 });
 
-/* ============================================================
-   🔵 LECTURE CSV / EXCEL
-============================================================ */
 function lireFichier(input, callback) {
     const fichier = input.files[0];
     if (!fichier) return;
@@ -278,9 +221,6 @@ function lireFichier(input, callback) {
 </script>
 
 <script>
-/* ============================================================
-   🔵 IMPORT MOYENNES (depuis GitHub)
-============================================================ */
 fetch("https://raw.githubusercontent.com/chiensdor/liste-de-d-part/main/resultats_moyennes.csv")
     .then(res => res.text())
     .then(csv => {
@@ -308,9 +248,6 @@ fetch("https://raw.githubusercontent.com/chiensdor/liste-de-d-part/main/resultat
         });
     });
 
-/* ============================================================
-   🔵 FUSION INSCRITS + MOYENNES
-============================================================ */
 function fusionner() {
 
     resultats = resultats.map(x => ({
@@ -341,9 +278,8 @@ function fusionner() {
         return {
             ...i,
             club: i.club && i.club.trim() !== "" 
-     		? i.club 
-       		: (r && r.club ? r.club : ""),
-
+                ? i.club 
+                : (r && r.club ? r.club : ""),
 
             moyenne: r ? r.moyenne : "",
             courses: r ? r.courses : "",
@@ -362,9 +298,6 @@ function fusionner() {
     alert("Fusion terminée !");
 }
 
-/* ============================================================
-   🔵 GÉNÉRATION DES PARAMÈTRES PAR DISCIPLINE
-============================================================ */
 function genererParametresParDiscipline() {
 
     const disciplines = [...new Set(resultatsGlobaux.map(r => r.discipline))];
@@ -396,7 +329,7 @@ function genererParametresParDiscipline() {
                     <option value="30s">Individuel 30s</option>
                 </select>
 
-                <div id="intervalle_${id}" style="margin-top:10px; display:none;">
+                <div id="intervalle_${id}" style="margin-top:10px;">
                     <label>Intervalle entre départs :</label>
                     <select id="select_intervalle_${id}">
                         <option value="15">15 secondes</option>
@@ -410,9 +343,8 @@ function genererParametresParDiscipline() {
             </div>
         `;
 
-        if (!d.includes("canivtt") && !d.includes("canipedicycle")) {
-            document.getElementById("intervalle_" + id).style.display = "block";
-        }
+        /* 🔵 MODIFICATION : intervalle toujours affiché */
+        document.getElementById("intervalle_" + id).style.display = "block";
 
         paramDepart[d] = {
             heure: "09:00",
@@ -423,7 +355,6 @@ function genererParametresParDiscipline() {
     });
 }
 </script>
-
 <script>
 /* ============================================================
    🔵 TRI PAR MOYENNE
@@ -431,13 +362,11 @@ function genererParametresParDiscipline() {
 function trierParMoyenne(liste) {
     return liste.sort((a, b) => {
 
-        // 1️⃣ FRA en premier
         const aFRA = (a.equipe_france || "").toUpperCase() === "FRA" ? 1 : 0;
         const bFRA = (b.equipe_france || "").toUpperCase() === "FRA" ? 1 : 0;
 
         if (aFRA !== bFRA) return bFRA - aFRA;
 
-        // 2️⃣ Tri par moyenne
         const ma = Number(a.moyenne) || 0;
         const mb = Number(b.moyenne) || 0;
 
@@ -447,6 +376,7 @@ function trierParMoyenne(liste) {
         return ma - mb;
     });
 }
+
 /* ============================================================
    🔵 DÉPARTS PAR GROUPES
 ============================================================ */
@@ -511,11 +441,8 @@ document.getElementById("btnGenererListes").addEventListener("click", () => {
         trierParMoyenne(liste);
 
         let intervalle = 30;
-
-        if (!d.includes("canivtt") && !d.includes("canipedicycle")) {
-            const sel = document.getElementById("select_intervalle_" + id);
-            if (sel) intervalle = Number(sel.value);
-        }
+        const sel = document.getElementById("select_intervalle_" + id);
+        if (sel) intervalle = Number(sel.value);
 
         if (mode === "30s") {
             listesFinales[d] = genererIndividuel30s(liste, heure);
@@ -541,10 +468,8 @@ document.getElementById("btnGenererListes").addEventListener("click", () => {
     alert("Listes générées !");
 });
 </script>
+
 <script>
-/* ============================================================
-   🔵 AFFICHAGE DU TABLEAU
-============================================================ */
 function afficherTableau() {
     const tbody = document.querySelector("#tableResultat tbody");
     tbody.innerHTML = "";
@@ -573,9 +498,6 @@ function afficherTableau() {
         filteredView.length + " inscrits fusionnés";
 }
 
-/* ============================================================
-   🔵 TRI DES COLONNES
-============================================================ */
 let triColonne = null;
 let triAsc = true;
 
@@ -609,9 +531,6 @@ document.querySelectorAll("#tableResultat th").forEach((th, index) => {
 </script>
 
 <script>
-/* ============================================================
-   🔵 EXPORT CSV
-============================================================ */
 function exporterCSV(data, nom) {
 
     const dataFiltre = data.map(x => ({
@@ -639,9 +558,6 @@ function exporterCSV(data, nom) {
     URL.revokeObjectURL(url);
 }
 
-/* ============================================================
-   🔵 EXPORT EXCEL (1 onglet)
-============================================================ */
 function exporterExcel(data, nom) {
 
     const dataFiltre = data.map(x => ({
@@ -659,7 +575,7 @@ function exporterExcel(data, nom) {
         heure_depart: x.heure_depart || ""
     }));
 
-    const ws = XLSX.utils.json_to_sheet(dataFiltre);
+      const ws = XLSX.utils.json_to_sheet(dataFiltre);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Départs");
     XLSX.writeFile(wb, nom);
@@ -814,6 +730,10 @@ if ("serviceWorker" in navigator) {
     });
 }
 </script>
+
+/* ==============================================================
+        PARTIE 4
+============================================================== */
 <!-- ============================================================
      🔵 POPUP LISTE ALPHABÉTIQUE
 ============================================================ -->
@@ -839,9 +759,6 @@ if ("serviceWorker" in navigator) {
 </div>
 
 <script>
-/* ============================================================
-   🔵 OUVERTURE / FERMETURE POPUP
-============================================================ */
 document.getElementById("btnAlphaChoix").addEventListener("click", () => {
     document.getElementById("popupAlpha").style.display = "block";
 });
@@ -850,9 +767,6 @@ document.getElementById("alphaClose").addEventListener("click", () => {
     document.getElementById("popupAlpha").style.display = "none";
 });
 
-/* ============================================================
-   🔵 LISTE ALPHABÉTIQUE (Nom → Prénom)
-============================================================ */
 function getListeAlphabetique() {
     return resultatsGlobaux
         .map(l => ({
@@ -868,9 +782,6 @@ function getListeAlphabetique() {
         });
 }
 
-/* ============================================================
-   🔵 EXPORT PDF ALPHABÉTIQUE
-============================================================ */
 function exportAlphaPDF() {
     const liste = getListeAlphabetique();
     if (!liste.length) return alert("Aucune donnée.");
@@ -920,9 +831,6 @@ function exportAlphaPDF() {
     w.onload = () => w.print();
 }
 
-/* ============================================================
-   🔵 EXPORT EXCEL ALPHABÉTIQUE
-============================================================ */
 function exportAlphaExcel() {
     const liste = getListeAlphabetique();
     if (!liste.length) return alert("Aucune donnée.");
@@ -934,9 +842,6 @@ function exportAlphaExcel() {
     XLSX.writeFile(wb, "liste_alphabetique.xlsx");
 }
 
-/* ============================================================
-   🔵 BOUTONS DU POPUP
-============================================================ */
 document.getElementById("alphaPDF").addEventListener("click", () => {
     exportAlphaPDF();
 });
