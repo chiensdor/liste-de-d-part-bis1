@@ -48,7 +48,7 @@ th { background:#e8edf5; cursor:pointer; }
 
 <header>
     FFSLC – Générateur de listes de départ
-    <div>Créé par Robert AURAY Copyright © version 3.01</div>
+    <div>Créé par Robert AURAY Copyright © version 3.02</div>
 </header>
 
 <button class="primary" onclick="window.location.href='https://chiensdor.github.io/menu-application/'">
@@ -75,6 +75,18 @@ th { background:#e8edf5; cursor:pointer; }
     <button id="btnExportExcelMulti" class="primary">Excel multi‑onglets</button>
     <button id="btnExporterTout" class="success">Exporter tout</button>
     <button id="btnAlphaChoix" class="primary">Liste alphabétique (choix)</button>
+<!-- 🔵 MODULE EXPORT SÉLECTIF (invisible tant que listes non générées) -->
+<div id="zoneExportSelectif" style="display:none; margin-top:15px; padding:10px; background:#eef5ff; border-radius:8px;">
+    <h3 style="color:#005bbb;">Export sélectif des disciplines</h3>
+
+    <select id="menuExport" style="font-size:18px; padding:8px; width:100%; margin-bottom:10px;">
+        <option value="">-- Choisir une discipline à exporter --</option>
+    </select>
+
+    <button id="btnExporterDiscipline" class="success">Exporter la discipline</button>
+    <button id="btnExporterGlobal" class="primary" style="display:none;">Exporter le global</button>
+</div>
+
 </div>
 
 <div class="card">
@@ -285,6 +297,7 @@ function fusionner() {
             courses: r ? r.courses : "",
             participants: r ? r.participants : "",
             discipline: i.discipline,
+
             equipe_france: r ? r.equipe_france : ""
         };
     });
@@ -590,6 +603,8 @@ document.getElementById("btnExportExcelMulti").addEventListener("click", () => {
         return;
     }
 
+    console.log("Disciplines brutes :", Object.keys(listesFinales));
+
     const wb = XLSX.utils.book_new();
 
     for (let d in listesFinales) {
@@ -610,27 +625,52 @@ document.getElementById("btnExportExcelMulti").addEventListener("click", () => {
         }));
 
         const ws = XLSX.utils.json_to_sheet(dataFiltre);
-        XLSX.utils.book_append_sheet(wb, ws, d.substring(0, 31));
+
+        /* 🔵 Nettoyage complet du nom d’onglet */
+        const nomOnglet = d
+            .normalize("NFKD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/\u00A0/g, " ")
+            .replace(/[\r\n\t]/g, "")
+            .replace(/[^a-zA-Z0-9 _-]/g, "")
+            .trim()
+            .substring(0, 31);
+
+        XLSX.utils.book_append_sheet(wb, ws, nomOnglet);
     }
 
     XLSX.writeFile(wb, "depart_multi_onglets.xlsx");
 });
-
 /* ============================================================
    🔵 EXPORTER TOUT (CSV + Excel)
 ============================================================ */
 document.getElementById("btnExporterTout").addEventListener("click", () => {
+console.log("Exporter tout déclenché !");
     if (!listesFinales || Object.keys(listesFinales).length === 0) {
         alert("Génère d’abord les listes de départ.");
         return;
     }
 
     for (let d in listesFinales) {
-        exporterCSV(listesFinales[d], `depart_${d}.csv`);
-        exporterExcel(listesFinales[d], `depart_${d}.xlsx`);
+
+        // 🔵 Nettoyage du nom de fichier (identique au multi‑onglets)
+        const nomFichier = d
+            .normalize("NFKD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/\u00A0/g, " ")
+            .replace(/[\r\n\t]/g, "")
+            .replace(/[^a-zA-Z0-9 _-]/g, "")
+            .trim()
+            .substring(0, 31);
+
+        exporterCSV(listesFinales[d], `depart_${nomFichier}.csv`);
+        exporterExcel(listesFinales[d], `depart_${nomFichier}.xlsx`);
     }
 
-    exporterExcel(resultatsGlobaux, "depart_global.xlsx");
+    // 🔵 Global reconstruit depuis listesFinales (plus fiable)
+    const global = Object.values(listesFinales).flat();
+
+    exporterExcel(global, "depart_global.xlsx");
 
     alert("Tous les fichiers ont été exportés.");
 });
@@ -850,6 +890,66 @@ document.getElementById("alphaExcel").addEventListener("click", () => {
 document.getElementById("alphaBoth").addEventListener("click", () => {
     exportAlphaPDF();
     exportAlphaExcel();
+});
+</script>
+<!-- ============================================================
+   🔵 MODULE EXPORT SÉLECTIF (JS)
+============================================================ -->
+<script>
+function remplirMenuExport() {
+    const menu = document.getElementById("menuExport");
+    if (!menu) return;
+
+    menu.innerHTML = '<option value="">-- Choisir une discipline à exporter --</option>';
+
+    for (let d in listesFinales) {
+        const opt = document.createElement("option");
+        opt.value = d;
+        opt.textContent = d;
+        menu.appendChild(opt);
+    }
+}
+
+document.getElementById("btnGenererListes").addEventListener("click", () => {
+    // 🔵 Affiche le module après génération
+    document.getElementById("zoneExportSelectif").style.display = "block";
+
+    // 🔵 Remplit le menu
+    setTimeout(() => {
+        remplirMenuExport();
+    }, 200);
+});
+
+document.getElementById("btnExporterDiscipline").addEventListener("click", () => {
+    const d = document.getElementById("menuExport").value;
+    if (!d) return alert("Choisis une discipline.");
+
+    const nomFichier = d
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/\u00A0/g, " ")
+        .replace(/[\r\n\t]/g, "")
+        .replace(/[^a-zA-Z0-9 _-]/g, "")
+        .trim()
+        .substring(0, 31);
+
+    exporterCSV(listesFinales[d], `depart_${nomFichier}.csv`);
+    exporterExcel(listesFinales[d], `depart_${nomFichier}.xlsx`);
+
+    // 🔵 Retire la discipline du menu
+    const opt = document.querySelector(`#menuExport option[value="${d}"]`);
+    if (opt) opt.remove();
+
+    const menu = document.getElementById("menuExport");
+    if (menu.options.length === 1) {
+        document.getElementById("btnExporterGlobal").style.display = "inline-block";
+    }
+});
+
+document.getElementById("btnExporterGlobal").addEventListener("click", () => {
+    const global = Object.values(listesFinales).flat();
+    exporterExcel(global, "depart_global.xlsx");
+    alert("Export global terminé !");
 });
 </script>
 
